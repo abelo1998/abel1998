@@ -1,68 +1,62 @@
-
-int thermoPin=1;
-float thermo=0;
-float temp=0;
-int tempint=0;
-int tempmotor=0;
-
-int motorPin=5;
-int motorpwm=0;
-int motorprint=0;
-
 #include <LiquidCrystal.h>
-LiquidCrystal lcd(12, 11, 10 , 9, 8, 7);
-
-
-
-
+LiquidCrystal lcd(2,3,4,5,6,7);
+int tempPin = A0; // the output pin of LM35
+int fan = 11; // the pin where fan is
+int led = 8; // led pin
+int temp;
+int tempMin = 30; // the temperature to start the fan 0%
+int tempMax = 60; // the maximum temperature when fan is at 100%
+int fanSpeed;
+int fanLCD;
+ 
 void setup() {
-  lcd.begin(20, 4);
-  lcd.setCursor(0, 0);
-  lcd.print("University of Piraeus");
-  lcd.setCursor(0, 1);
-  lcd.print("Temperature      C");
-  lcd.setCursor(0, 2);
-  lcd.print("Air flow speed    %");
-  lcd.setCursor(0, 3);
-
-  pinMode(motorPin, OUTPUT);
+pinMode(fan, OUTPUT);
+pinMode(led, OUTPUT);
+pinMode(tempPin, INPUT);
+lcd.begin(16,2);
+Serial.begin(9600);
 }
-
-void loop() {
-  thermo=analogRead(thermoPin);
-
-
-  temp=(thermo*500)/1023;
-  tempint = (int) temp;
-  tempmotor=tempint;
-  if (tempmotor>=50){
-    tempmotor=50;
-  }
-  if (tempmotor<=30){
-    tempmotor=30;
-  }
-  motorpwm=map(tempmotor, 30, 50, 0, 255);
-  analogWrite(motorPin,motorpwm);
-
-
-  lcd.setCursor(17,1);
-  lcd.print(tempint);
-
-  motorprint=map(motorpwm, 0, 255, 0, 100);
-  if (motorprint<10){
-    lcd.setCursor(16,2);
-    lcd.print(" ");
-    lcd.setCursor(18,2);
-    lcd.print(motorprint);
-   }
-   else if (motorprint<100){
-    lcd.setCursor(16,2);
-    lcd.print(" ");
-    lcd.setCursor(17,2);
-    lcd.print(motorprint);
-   }
-   else {
-    lcd.setCursor(16,2);
-    lcd.print(motorprint);
-   }
+ 
+void loop()
+{
+temp = readTemp(); // get the temperature
+Serial.print( temp );
+if(temp < tempMin) // if temp is lower than minimum temp
+{
+fanSpeed = 0; // fan is not spinning
+analogWrite(fan, fanSpeed);
+fanLCD=0;
+digitalWrite(fan, LOW);
+}
+if((temp >= tempMin) && (temp <= tempMax)) // if temperature is higher than minimum temp
+{
+fanSpeed = temp;//map(temp, tempMin, tempMax, 0, 100); // the actual speed of fan//map(temp, tempMin, tempMax, 32, 255);
+fanSpeed=1.5*fanSpeed;
+fanLCD = map(temp, tempMin, tempMax, 0, 100); // speed of fan to display on LCD100
+analogWrite(fan, fanSpeed); // spin the fan at the fanSpeed speed
+}
+ 
+if(temp > tempMax) // if temp is higher than tempMax
+{
+digitalWrite(led, HIGH); // turn on led
+}
+else // else turn of led
+{
+digitalWrite(led, LOW);
+}
+ 
+lcd.print("TEMP: ");
+lcd.print(temp); // display the temperature
+lcd.print("C ");
+lcd.setCursor(0,1); // move cursor to next line
+lcd.print("FANS: ");
+lcd.print(fanLCD); // display the fan speed
+lcd.print("%");
+delay(200);
+lcd.clear();
+}
+ 
+int readTemp() { // get the temperature and convert it to celsius
+temp = analogRead(tempPin);
+return temp * 0.48828125;
 }
